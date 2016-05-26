@@ -1,0 +1,203 @@
+PNautoSort v1.1 by kill0rz (C) 2014 - visit kill0rz.com
+
+Copyright
+#########
+
+Dieser Hack darf überall zum Download angeboten werden, auch mit veränderten Dateien. Es muss aber immer dieser Copyrightvermerk enthalten sein!
+Veränderungen sind zu kennzeichnen und in der jeweiligen Installationsanleitung zu vermerken.
+
+Beschreibung
+############
+
+Dieser Hack ermöglicht es, Private Nachrichten (PNs) schnell und ohne Umwege zu sortieren.
+Die Nachrichten werden dazu in Ordner verschoben, die den gleichen Namen tragen wie der Nutzer, der die Nachricht gesendet hat.
+Dazu werden unten rechts in der Drop-Down-Liste in der Nachrichtenübersicht (pms.php) folgende drei Optionen hinzugefügt (optional können Buttons eingebaut werden):
+
++ markierte PNs automatisch sortieren
+--> alle markierten Nachrichten werden sortiert
+
++ Alle PNs im Posteingang sortieren
+--> alle Nachrichten, die in noch keinem Ordner (also noch im Ordner Posteingang) liegen, werden sortiert
+
++ Alle PNs in allen Ordnern sortieren
+--> Es werden alle Nachrichten neu sortiert, unabhängig davon, in welchem Ordner sie liegen
+
+Ordner, die noch nicht existieren, werden automatisch erstellt. Er werden keine Nachrichten oder Ordner gelöscht; leere Ordner müssen dann ggf. noch entfernt werden.
+Es steht jedem selbstverständlich frei Nachrichten wiederzurückzusortieren.
+
+
+Getestet mit und geschrieben für WBB2.3.6pl2
+
+
+Installationszeit
+#################
+
+10min
+
+Changelog
+#########
+
+v1.0 (03.04.2014)
+----
+Grundskript
+
+v1.1 (26.06.2014)
+----
+-added: Buttons zum einfachereren auswählen
+-fixed: Fehlermeldungen
+-removed: Troubleshooting
+
+Demo
+####
+
+liegt bei
+
+
+
+Installtion
+###########
+
+Lade die alle Dateien in der Struktur von wbb2/ in deinen Forenordner.
+Zur Sicherheit Templates exportieren.
+Importiere das Template --> cachen --> nur neue Templates cachen
+
+Datei: pms.php
+====== --------
+
+#######
+Suche:#
+#######
+
+		else {
+			eval("\$moveto_options .= \"".$tpl->get("pms_moveto_options")."\";");
+		}
+	}
+
+###################
+Füge darunter ein:#
+###################
+
+	//PNautoSort by kill0rz v1.1
+	eval("\$moveto_options .= \"".$tpl->get("pms_moveto_autosort")."\";");
+
+#######
+Suche:#
+#######
+
+/** remove a folder **/
+if (isset($_GET['action']) && $_GET['action'] == 'removefolder') {
+	$folderid = intval($_GET['folderid']);
+
+	list($controluser) = $db->query_first("SELECT userid FROM bb".$n."_folders WHERE folderid='$folderid'");
+	if ($controluser != $wbbuserdata['userid']) access_error();
+
+	$db->unbuffered_query("UPDATE bb".$n."_privatemessagereceipts SET folderid = '0' WHERE folderid='$folderid'", 1);
+	$db->unbuffered_query("DELETE FROM bb".$n."_folders WHERE folderid='$folderid'", 1);
+
+	header("Location: pms.php".$SID_ARG_1ST);
+	exit;
+}
+
+###################
+Füge darunter ein:#
+###################
+
+
+//PNautoSort by kill0rz v1.1 *Anfang*
+
+if(isset($_POST['action']) and $_POST['action']=="moveto-auto" or  $_POST['action']=="sortall" or $_POST['action']=="sortunsorted") {
+
+	if($_POST['action']=="sortall"){
+		$userinformation = $db->unbuffered_query("SELECT recipientid,folderid,deletepm,privatemessageid FROM bb".$n."_privatemessagereceipts");
+		while($row = $db->fetch_array($userinformation)){
+			if($row['recipientid'] == $wbbuserdata['userid'] and $row['deletepm'] == 0){
+				$pmids[] = $row['privatemessageid'];
+			}
+		}
+	}elseif($_POST['action']=="sortunsorted"){
+		$userinformation = $db->unbuffered_query("SELECT recipientid,folderid,deletepm,privatemessageid FROM bb".$n."_privatemessagereceipts");
+		while($row = $db->fetch_array($userinformation)){
+			if($row['recipientid'] == $wbbuserdata['userid'] and $row['deletepm'] == 0 and $row['folderid'] == 0){
+				$pmids[] = $row['privatemessageid'];
+			}
+		}
+	}else{
+		$pmids = $_POST['pmid'];
+	}
+	
+	$userinformation = $db->unbuffered_query("SELECT username,userid FROM bb".$n."_users ORDER BY username");
+	while($row = $db->fetch_array($userinformation)){
+		$sortusername[$row['userid']] = $row['username'];
+	}
+	
+	if(count($pmids) > 0){
+		foreach($pmids as $pmid){
+			$pnsender = $db->unbuffered_query("SELECT senderid FROM bb".$n."_privatemessage WHERE privatemessageid = ".$pmid);
+			while ($row = $db->fetch_array($pnsender)) {
+				if(isset($sortusername[$row['senderid']])) $sendername = $sortusername[$row['senderid']];
+			}
+			
+			$userinformation2 = $db->unbuffered_query("SELECT folderid,title FROM bb".$n."_folders WHERE userid = ".$wbbuserdata['userid']);
+			while($row = $db->fetch_array($userinformation2)){
+				if($sendername == $row['title']){
+					$sortfolderid = $row['folderid'];
+				}
+			}
+			if(!isset($sortfolderid) or trim($sortfolderid) == ''){
+				$db->query("INSERT INTO bb".$n."_folders (userid,title) VALUES ('".$wbbuserdata['userid']."','".$sendername."')");
+				$userinformation2 = $db->unbuffered_query("SELECT folderid,title FROM bb".$n."_folders WHERE userid = ".$wbbuserdata['userid']);
+				while($row = $db->fetch_array($userinformation2)){
+					if($sendername == $row['title']){
+						$sortfolderid = $row['folderid'];
+					}
+				}
+			}
+			
+			$db->query("UPDATE bb".$n."_privatemessagereceipts SET folderid='$sortfolderid' WHERE privatemessageid = $pmid");		
+			$sortfolderid = "";
+			
+		}
+	}
+
+header("Location: pms.php?folderid=$folderid".$SID_ARG_2ND_UN);
+ exit();
+}
+
+//PNautoSort by kill0rz v1.1 *Ende*
+
+
+OPTIONAL:
+#########
+
+Mit dem folgenden Code werdne buttons über der Auswahl eingebaut. Dies vereinfacht die Nutzung, ist optisch aber unschön.
+
+-Importiere das tempate "pms_moveto_autosort_buttons"
+
+
+Datei: pms.php
+====== --------
+
+#######
+Suche:#
+#######
+
+$d_select[$daysprune] = ' selected="selected"';
+
+###################
+Füge darunter ein:#
+###################
+
+//PNautoSort by kill0rz v1.1
+eval("\$moveto_options_buttons .= \"".$tpl->get("pms_moveto_autosort_buttons")."\";");
+
+
+
+
+FERTIG!
+Nun können du und alle User das Script benutzen!
+
+Viel Spaß bei der Verwendung,
+kill0rz
+http://kill0rz.com/
+
+Stand: 24.06.2014
