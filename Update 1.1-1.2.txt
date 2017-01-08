@@ -1,0 +1,10 @@
+PNautoSort Update von v1.1 auf v1.2 by kill0rz (C) 2017 - visit kill0rz.com
+
+OPTIONAL (nur wenn eingebaut):
+##############################
+
+Mit dem folgenden Code werdne buttons über der Auswahl eingebaut. Dies vereinfacht die Nutzung, ist optisch aber unschön.
+
+-Importiere das tempate "pms_moveto_autosort_buttons"
+
+Fertig (:
