@@ -103,67 +103,86 @@ F¸ge darunter ein:#
 ###################
 
 
-//PNautoSort by kill0rz v1.1 *Anfang*
+if (isset($_POST['action_sort']) && ($_POST['action_sort'] == "moveto-auto" || $_POST['action_sort'] == "sortall" || $_POST['action_sort'] == "sortunsorted")) {
 
-if(isset($_POST['action']) and $_POST['action']=="moveto-auto" or  $_POST['action']=="sortall" or $_POST['action']=="sortunsorted") {
-
-	if($_POST['action']=="sortall"){
-		$userinformation = $db->unbuffered_query("SELECT recipientid,folderid,deletepm,privatemessageid FROM bb".$n."_privatemessagereceipts");
-		while($row = $db->fetch_array($userinformation)){
-			if($row['recipientid'] == $wbbuserdata['userid'] and $row['deletepm'] == 0){
+	if (trim($_POST['action_sort']) == "sortall") {
+		echo "string";
+		//hole alle MSGs aus dem allgemeinen Ordner
+		$userinformation = $db->unbuffered_query("SELECT recipientid,folderid,deletepm,privatemessageid FROM bb" . $n . "_privatemessagereceipts");
+		while ($row = $db->fetch_array($userinformation)) {
+			if ($row['recipientid'] == $wbbuserdata['userid'] and $row['deletepm'] == 0) {
 				$pmids[] = $row['privatemessageid'];
 			}
 		}
-	}elseif($_POST['action']=="sortunsorted"){
-		$userinformation = $db->unbuffered_query("SELECT recipientid,folderid,deletepm,privatemessageid FROM bb".$n."_privatemessagereceipts");
-		while($row = $db->fetch_array($userinformation)){
-			if($row['recipientid'] == $wbbuserdata['userid'] and $row['deletepm'] == 0 and $row['folderid'] == 0){
+	} elseif (trim($_POST['action_sort']) == "sortunsorted") {
+		//hole alle MSGs aus dem allgemeinen Ordner
+		$userinformation = $db->unbuffered_query("SELECT recipientid,folderid,deletepm,privatemessageid FROM bb" . $n . "_privatemessagereceipts");
+		while ($row = $db->fetch_array($userinformation)) {
+			if ($row['recipientid'] == $wbbuserdata['userid'] and $row['deletepm'] == 0 and $row['folderid'] == 0) {
 				$pmids[] = $row['privatemessageid'];
 			}
 		}
-	}else{
+	} else {
+		//w‰hle nur markierte Nachrichten
 		$pmids = $_POST['pmid'];
 	}
-	
-	$userinformation = $db->unbuffered_query("SELECT username,userid FROM bb".$n."_users ORDER BY username");
-	while($row = $db->fetch_array($userinformation)){
+
+	//usernamen und IDs finden
+	$userinformation = $db->unbuffered_query("SELECT username,userid FROM bb" . $n . "_users ORDER BY username");
+	while ($row = $db->fetch_array($userinformation)) {
 		$sortusername[$row['userid']] = $row['username'];
 	}
-	
-	if(count($pmids) > 0){
-		foreach($pmids as $pmid){
-			$pnsender = $db->unbuffered_query("SELECT senderid FROM bb".$n."_privatemessage WHERE privatemessageid = ".$pmid);
+
+	if (count($pmids) > 0) {
+		foreach ($pmids as $pmid) {
+			//move every fucking PN
+			$pnsender = $db->unbuffered_query("SELECT senderid FROM bb" . $n . "_privatemessage WHERE privatemessageid = " . $pmid);
 			while ($row = $db->fetch_array($pnsender)) {
-				if(isset($sortusername[$row['senderid']])) $sendername = $sortusername[$row['senderid']];
+				//Jetzt haben wir die User-ID
+				//$row['senderid'] enth‰lt die ID des Senders
+				if (isset($sortusername[$row['senderid']])) {
+					$sendername = $sortusername[$row['senderid']];
+				}
+
 			}
-			
-			$userinformation2 = $db->unbuffered_query("SELECT folderid,title FROM bb".$n."_folders WHERE userid = ".$wbbuserdata['userid']);
-			while($row = $db->fetch_array($userinformation2)){
-				if($sendername == $row['title']){
+
+			//jetzt haben wir den sendernamen und suchen dazu den ordner
+
+			$userinformation2 = $db->unbuffered_query("SELECT folderid,title FROM bb" . $n . "_folders WHERE userid = " . $wbbuserdata['userid']);
+			while ($row = $db->fetch_array($userinformation2)) {
+				if ($sendername == $row['title']) {
+					//es existiert bereits ein Ordner, verschieben wir PN da rein!
 					$sortfolderid = $row['folderid'];
 				}
 			}
-			if(!isset($sortfolderid) or trim($sortfolderid) == ''){
-				$db->query("INSERT INTO bb".$n."_folders (userid,title) VALUES ('".$wbbuserdata['userid']."','".$sendername."')");
-				$userinformation2 = $db->unbuffered_query("SELECT folderid,title FROM bb".$n."_folders WHERE userid = ".$wbbuserdata['userid']);
-				while($row = $db->fetch_array($userinformation2)){
-					if($sendername == $row['title']){
+			if (!isset($sortfolderid) or trim($sortfolderid) == '') {
+				//wir m¸ssen einen Ordner erstellen. das tuen wir hiermit
+				$db->query("INSERT INTO bb" . $n . "_folders (userid,title) VALUES ('" . $wbbuserdata['userid'] . "','" . $sendername . "')");
+
+				//nochmal nach der folderid suchen
+				$userinformation2 = $db->unbuffered_query("SELECT folderid,title FROM bb" . $n . "_folders WHERE userid = " . $wbbuserdata['userid']);
+				while ($row = $db->fetch_array($userinformation2)) {
+					if ($sendername == $row['title']) {
+						//da isser
 						$sortfolderid = $row['folderid'];
 					}
 				}
 			}
-			
-			$db->query("UPDATE bb".$n."_privatemessagereceipts SET folderid='$sortfolderid' WHERE privatemessageid = $pmid");		
+
+			//PN wird in den Ordner verschoben
+
+			$db->query("UPDATE bb" . $n . "_privatemessagereceipts SET folderid='$sortfolderid' WHERE privatemessageid = $pmid");
+
+			//zur Sicherheit unlinken wir die Parameter
 			$sortfolderid = "";
-			
 		}
 	}
 
-header("Location: pms.php?folderid=$folderid".$SID_ARG_2ND_UN);
- exit();
+	header("Location: pms.php?folderid=$folderid" . $SID_ARG_2ND_UN);
+	exit();
 }
 
-//PNautoSort by kill0rz v1.1 *Ende*
+//PNautoSort by kill0rz v1.0 *Ende*
 
 
 OPTIONAL:
@@ -200,4 +219,4 @@ Viel Spaﬂ bei der Verwendung,
 kill0rz
 http://kill0rz.com/
 
-Stand: 24.06.2014
+Stand: 08.01.2017 17:01:09

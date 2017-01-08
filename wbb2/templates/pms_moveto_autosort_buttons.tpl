@@ -1,1 +1,4 @@
-<form action="pms.php" method="post"><input type="hidden" name="action" value="sortunsorted" /><input type="submit" value="alle PNs im Posteingang sortieren" /></form><form action="pms.php" method="post"><input type="hidden" name="action" value="sortall" /><input type="submit" value="alle PNs sortieren" /></form>
+<form action="pms.php" method="post">
+	<button type="submit" name="action_sort" value="sortunsorted">alle PNs im Posteingang sortieren</button>
+	<button type="submit" name="action_sort" value="sortall">alle PNs sortieren</button>
+</form>
