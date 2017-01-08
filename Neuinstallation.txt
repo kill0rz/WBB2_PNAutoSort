@@ -49,7 +49,7 @@ v1.1 (26.06.2014)
 
 v1.2 (08.01.2017)
 ----
--erhöthe Kompatibilität mit Browsern
+-erhöhte Kompatibilität mit Browsern
 -optische Verbesserungen
 
 Demo
